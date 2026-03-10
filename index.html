@@ -1,738 +1,1131 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Barcode Scanner</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/zxing-js/0.21.2/index.min.js"></script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Barcode Scanner</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sarabun:wght@300;400;600;700&display=swap');
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --card: #1a1a26;
+    --accent: #00ffaa;
+    --accent2: #ff6b35;
+    --accent3: #7c3aed;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+    --border: rgba(0,255,170,0.15);
+    --glow: 0 0 30px rgba(0,255,170,0.3);
+  }
 
-    :root {
-      --bg: #0a0a0f;
-      --surface: #111118;
-      --card: #18181f;
-      --border: #2a2a38;
-      --accent: #00e5ff;
-      --accent2: #7c3aed;
-      --success: #00ff87;
-      --text: #f0f0ff;
-      --muted: #6b6b88;
-    }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    body {
-      font-family: 'Syne', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      overflow-x: hidden;
-    }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Sarabun', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
 
-    /* Animated background grid */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
-      pointer-events: none;
-      z-index: 0;
-    }
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      linear-gradient(rgba(0,255,170,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,170,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
 
-    .app {
-      position: relative;
-      z-index: 1;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      padding: 20px 16px;
-      max-width: 480px;
-      margin: 0 auto;
-      width: 100%;
-    }
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 20px;
+    position: relative;
+    z-index: 1;
+  }
 
-    /* Header */
-    .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 28px;
-    }
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 36px;
+  }
 
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+  .logo {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    box-shadow: var(--glow);
+    animation: pulse 3s ease-in-out infinite;
+  }
 
-    .logo-icon {
-      width: 38px;
-      height: 38px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(0,255,170,0.3); }
+    50% { box-shadow: 0 0 40px rgba(0,255,170,0.6); }
+  }
 
-    .logo-icon svg { width: 20px; height: 20px; fill: white; }
+  .header-text h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 22px;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
 
-    .logo-text {
-      font-size: 18px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-    }
+  .header-text p {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 300;
+  }
 
-    .logo-text span { color: var(--accent); }
+  .live-badge {
+    margin-left: auto;
+    background: rgba(255,107,53,0.15);
+    border: 1px solid var(--accent2);
+    color: var(--accent2);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
 
-    .badge {
-      font-family: 'Space Mono', monospace;
-      font-size: 10px;
-      background: rgba(0,229,255,0.1);
-      border: 1px solid rgba(0,229,255,0.3);
-      color: var(--accent);
-      padding: 4px 10px;
-      border-radius: 20px;
-      letter-spacing: 1px;
-    }
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--accent2);
+    border-radius: 50%;
+    animation: blink 1.2s ease-in-out infinite;
+  }
 
-    /* Camera View */
-    .camera-container {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 1;
-      border-radius: 20px;
-      overflow: hidden;
-      background: #000;
-      margin-bottom: 20px;
-      border: 1px solid var(--border);
-    }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
 
-    #video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
+  /* Main layout */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
 
-    /* Scan overlay */
-    .scan-overlay {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-    }
+  @media (max-width: 650px) {
+    .main-grid { grid-template-columns: 1fr; }
+  }
 
-    .scan-frame {
-      width: 75%;
-      aspect-ratio: 2/1;
-      position: relative;
-    }
+  /* Cards */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
 
-    .scan-frame::before,
-    .scan-frame::after,
-    .corner-bl,
-    .corner-br {
-      content: '';
-      position: absolute;
-      width: 28px;
-      height: 28px;
-      border-color: var(--accent);
-      border-style: solid;
-    }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.5;
+  }
 
-    .scan-frame::before { top: 0; left: 0; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
-    .scan-frame::after  { top: 0; right: 0; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
-    .corner-bl { bottom: 0; left: 0; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
-    .corner-br { bottom: 0; right: 0; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+  .card:hover { border-color: rgba(0,255,170,0.3); }
 
-    .scan-line {
-      position: absolute;
-      left: 8px;
-      right: 8px;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--accent), var(--accent), transparent);
-      animation: scanMove 2s ease-in-out infinite;
-      box-shadow: 0 0 10px var(--accent), 0 0 20px rgba(0,229,255,0.5);
-    }
+  .card-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 
-    @keyframes scanMove {
-      0%   { top: 10%; opacity: 0; }
-      10%  { opacity: 1; }
-      90%  { opacity: 1; }
-      100% { top: 90%; opacity: 0; }
-    }
+  .card-title::before {
+    content: '';
+    width: 3px;
+    height: 12px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
 
-    .scan-label {
-      position: absolute;
-      bottom: -26px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-family: 'Space Mono', monospace;
-      font-size: 10px;
-      color: rgba(0,229,255,0.7);
-      letter-spacing: 2px;
-      white-space: nowrap;
-    }
+  /* Camera section */
+  .camera-card {
+    grid-column: 1 / -1;
+  }
 
-    /* Pause overlay */
-    .pause-overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(10,10,15,0.85);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 12px;
-      opacity: 0;
-      transition: opacity 0.3s;
-      pointer-events: none;
-    }
+  .scanner-wrapper {
+    position: relative;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    aspect-ratio: 16/9;
+    max-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
-    .pause-overlay.visible { opacity: 1; }
-    .pause-icon { font-size: 48px; }
-    .pause-text { color: var(--muted); font-size: 14px; letter-spacing: 1px; }
+  #interactive {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
 
-    /* Flash on success */
-    .flash {
-      position: absolute;
-      inset: 0;
-      background: var(--success);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.1s;
-    }
-    .flash.active { opacity: 0.25; }
+  /* html5-qrcode overrides */
+  #interactive video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    border-radius: 0 !important;
+  }
 
-    /* Result Card */
-    .result-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 20px;
-      margin-bottom: 16px;
-      transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
-      transform: translateY(8px);
-      opacity: 0;
-    }
+  #interactive canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+  }
 
-    .result-card.visible {
-      transform: translateY(0);
-      opacity: 1;
-      border-color: rgba(0,255,135,0.3);
-    }
+  /* ซ่อน UI default ของ html5-qrcode */
+  #interactive > img { display: none !important; }
+  #interactive #qr-shaded-region {
+    border-color: var(--accent) !important;
+  }
 
-    .result-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 14px;
-    }
+  /* Scanner overlay */
+  .scan-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 10;
+  }
 
-    .result-tag {
-      font-family: 'Space Mono', monospace;
-      font-size: 10px;
-      letter-spacing: 2px;
-      color: var(--success);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
+  .scan-corners {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 200px;
+    height: 100px;
+  }
 
-    .result-tag::before {
-      content: '';
-      width: 6px;
-      height: 6px;
-      background: var(--success);
-      border-radius: 50%;
-      animation: pulse 1.5s ease-in-out infinite;
-    }
+  .scan-corners::before,
+  .scan-corners::after,
+  .corner-br,
+  .corner-bl {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-color: var(--accent);
+    border-style: solid;
+  }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.8); }
-    }
+  .scan-corners::before { top: 0; left: 0; border-width: 2px 0 0 2px; }
+  .scan-corners::after { top: 0; right: 0; border-width: 2px 2px 0 0; }
+  .corner-br { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+  .corner-bl { bottom: 0; left: 0; border-width: 0 0 2px 2px; }
 
-    .result-format {
-      font-size: 10px;
-      color: var(--muted);
-      font-family: 'Space Mono', monospace;
-      background: rgba(255,255,255,0.05);
-      padding: 3px 8px;
-      border-radius: 6px;
-    }
+  .scan-line {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 180px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: scanMove 2s ease-in-out infinite;
+    box-shadow: 0 0 10px var(--accent);
+  }
 
-    .result-number {
-      font-family: 'Space Mono', monospace;
-      font-size: 28px;
-      font-weight: 700;
-      letter-spacing: 2px;
-      color: var(--text);
-      word-break: break-all;
-      line-height: 1.2;
-      margin-bottom: 14px;
-    }
+  @keyframes scanMove {
+    0% { top: calc(50% - 40px); }
+    50% { top: calc(50% + 40px); }
+    100% { top: calc(50% - 40px); }
+  }
 
-    .result-actions {
-      display: flex;
-      gap: 10px;
-    }
+  .camera-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--muted);
+    height: 100%;
+    padding: 40px;
+    text-align: center;
+  }
 
-    .btn {
-      flex: 1;
-      padding: 12px;
-      border-radius: 12px;
-      border: none;
-      cursor: pointer;
-      font-family: 'Syne', sans-serif;
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
+  .camera-placeholder .icon {
+    font-size: 48px;
+    opacity: 0.4;
+  }
 
-    .btn:active { transform: scale(0.96); }
+  .camera-placeholder p { font-size: 14px; }
 
-    .btn-copy {
-      background: rgba(0,229,255,0.1);
-      border: 1px solid rgba(0,229,255,0.3);
-      color: var(--accent);
-    }
+  /* Buttons */
+  .btn-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
 
-    .btn-copy:hover { background: rgba(0,229,255,0.2); }
+  .btn {
+    flex: 1;
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 120px;
+  }
 
-    .btn-rescan {
-      background: rgba(124,58,237,0.15);
-      border: 1px solid rgba(124,58,237,0.4);
-      color: #a78bfa;
-    }
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+  }
 
-    .btn-rescan:hover { background: rgba(124,58,237,0.25); }
+  .btn-primary:hover {
+    background: #00e699;
+    box-shadow: var(--glow);
+    transform: translateY(-1px);
+  }
 
-    /* History */
-    .history-section {
-      flex: 1;
-    }
+  .btn-danger {
+    background: rgba(255,107,53,0.15);
+    color: var(--accent2);
+    border: 1px solid rgba(255,107,53,0.3);
+  }
 
-    .section-title {
-      font-size: 12px;
-      letter-spacing: 2px;
-      color: var(--muted);
-      text-transform: uppercase;
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+  .btn-danger:hover {
+    background: rgba(255,107,53,0.25);
+    transform: translateY(-1px);
+  }
 
-    .section-title::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-    }
+  .btn-ghost {
+    background: rgba(255,255,255,0.05);
+    color: var(--muted);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
 
-    .history-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
+  .btn-ghost:hover {
+    background: rgba(255,255,255,0.1);
+    color: var(--text);
+  }
 
-    .history-item {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      animation: slideIn 0.3s ease;
-    }
+  /* Manual input */
+  .input-group {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+  }
 
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateX(-10px); }
-      to { opacity: 1; transform: translateX(0); }
-    }
+  .input-field {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
 
-    .history-icon {
-      width: 32px;
-      height: 32px;
-      background: rgba(0,229,255,0.08);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      font-size: 14px;
-    }
+  .input-field:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,255,170,0.1);
+  }
 
-    .history-info { flex: 1; min-width: 0; }
+  .input-field::placeholder { color: var(--muted); }
 
-    .history-code {
-      font-family: 'Space Mono', monospace;
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+  /* Result display */
+  .result-card {
+    display: none;
+  }
 
-    .history-meta {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 2px;
-    }
+  .result-card.visible {
+    display: block;
+    animation: slideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
 
-    .history-copy {
-      background: none;
-      border: none;
-      color: var(--muted);
-      cursor: pointer;
-      padding: 6px;
-      border-radius: 6px;
-      transition: all 0.2s;
-      font-size: 14px;
-    }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
 
-    .history-copy:hover { color: var(--accent); background: rgba(0,229,255,0.1); }
+  .result-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 20px;
+    color: var(--accent);
+    word-break: break-all;
+    padding: 16px;
+    background: rgba(0,255,170,0.05);
+    border-radius: 10px;
+    border: 1px solid rgba(0,255,170,0.2);
+    margin-bottom: 12px;
+    line-height: 1.5;
+    text-shadow: 0 0 20px rgba(0,255,170,0.4);
+  }
 
-    .empty-state {
-      text-align: center;
-      padding: 32px 20px;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.8;
-    }
+  .result-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
 
-    .empty-state .icon { font-size: 36px; margin-bottom: 8px; opacity: 0.4; }
+  .meta-tag {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+  }
 
-    /* Start button */
-    .start-btn {
-      width: 100%;
-      padding: 16px;
-      background: linear-gradient(135deg, var(--accent), #0099bb);
-      border: none;
-      border-radius: 16px;
-      color: #000;
-      font-family: 'Syne', sans-serif;
-      font-size: 16px;
-      font-weight: 800;
-      letter-spacing: 1px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      transition: all 0.2s;
-      margin-bottom: 16px;
-    }
+  .meta-type {
+    background: rgba(124,58,237,0.15);
+    color: #a78bfa;
+    border: 1px solid rgba(124,58,237,0.3);
+  }
 
-    .start-btn:active { transform: scale(0.98); }
-    .start-btn:hover { filter: brightness(1.1); }
+  .meta-time {
+    background: rgba(0,255,170,0.08);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
 
-    /* Toast */
-    .toast {
-      position: fixed;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%) translateY(80px);
-      background: var(--success);
-      color: #000;
-      padding: 12px 24px;
-      border-radius: 50px;
-      font-size: 14px;
-      font-weight: 700;
-      font-family: 'Space Mono', monospace;
-      transition: transform 0.3s cubic-bezier(0.16,1,0.3,1);
-      z-index: 100;
-      white-space: nowrap;
-    }
-    .toast.show { transform: translateX(-50%) translateY(0); }
+  /* Log */
+  .log-container {
+    max-height: 280px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
 
-    /* No camera message */
-    .no-camera {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      gap: 8px;
-      color: var(--muted);
-      font-size: 13px;
-      text-align: center;
-      padding: 20px;
-    }
-    .no-camera .icon { font-size: 40px; margin-bottom: 4px; }
-  </style>
+  .log-container::-webkit-scrollbar { width: 4px; }
+  .log-container::-webkit-scrollbar-track { background: transparent; }
+  .log-container::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 2px; }
+
+  .log-empty {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    padding: 32px 0;
+    font-style: italic;
+  }
+
+  .log-item {
+    background: var(--surface);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: fadeInUp 0.3s ease;
+    transition: border-color 0.2s;
+    cursor: pointer;
+  }
+
+  .log-item:hover { border-color: var(--border); }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .log-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    min-width: 24px;
+  }
+
+  .log-data {
+    flex: 1;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .log-time {
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  /* Stats */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  .stat-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .stat-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 28px;
+    color: var(--accent);
+    display: block;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 300;
+  }
+
+  /* Status indicators */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border-radius: 8px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+
+  .status-dot.active { background: var(--accent); animation: blink 1s infinite; }
+  .status-dot.error { background: #ef4444; }
+
+  /* Copy feedback */
+  .copy-toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--accent);
+    color: #000;
+    padding: 10px 24px;
+    border-radius: 30px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 100;
+  }
+
+  .copy-toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Beep visual */
+  .beep-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    border: 2px solid var(--accent);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 20;
+  }
+
+  .beep-ring.flash {
+    animation: beepFlash 0.5s ease;
+  }
+
+  @keyframes beepFlash {
+    0% { opacity: 0.8; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.02); }
+  }
+
+  /* Image upload */
+  .upload-zone {
+    border: 2px dashed rgba(0,255,170,0.25);
+    border-radius: 12px;
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s;
+    background: rgba(0,255,170,0.02);
+    position: relative;
+  }
+
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(0,255,170,0.06);
+    box-shadow: 0 0 20px rgba(0,255,170,0.1);
+  }
+
+  .upload-zone input[type=file] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .upload-icon { font-size: 36px; margin-bottom: 8px; opacity: 0.6; }
+  .upload-label { font-size: 14px; color: var(--text); margin-bottom: 4px; }
+  .upload-hint { font-size: 11px; color: var(--muted); }
+
+  .img-preview-wrap {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    display: none;
+    margin-top: 12px;
+    background: #000;
+    max-height: 220px;
+  }
+
+  .img-preview-wrap img {
+    width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+    display: block;
+  }
+
+  .img-clear-btn {
+    position: absolute;
+    top: 8px; right: 8px;
+    background: rgba(0,0,0,0.7);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    transition: background 0.2s;
+  }
+
+  .img-clear-btn:hover { background: rgba(255,107,53,0.6); }
+
+  .img-scan-btn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 12px;
+    background: linear-gradient(135deg, rgba(0,255,170,0.15), rgba(124,58,237,0.15));
+    border: 1px solid rgba(0,255,170,0.3);
+    border-radius: 10px;
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    display: none;
+  }
+
+  .img-scan-btn:hover {
+    background: linear-gradient(135deg, rgba(0,255,170,0.25), rgba(124,58,237,0.25));
+    box-shadow: var(--glow);
+  }
+
+  .img-scan-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .img-result-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.55);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+
+  .img-result-overlay.show { opacity: 1; }
+
+  .img-result-badge {
+    background: var(--accent);
+    color: #000;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    max-width: 80%;
+    text-align: center;
+    word-break: break-all;
+  }
+
+  .processing-spinner {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .processing-spinner.show { display: flex; }
+
+  .spinner-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: dotPulse 1.4s ease-in-out infinite;
+  }
+  .spinner-dot:nth-child(2) { animation-delay: 0.2s; }
+  .spinner-dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes dotPulse {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+</style>
 </head>
 <body>
-<div class="app">
 
+<div class="container">
   <!-- Header -->
   <div class="header">
-    <div class="logo">
-      <div class="logo-icon">
-        <svg viewBox="0 0 24 24"><path d="M2 4h4v16H2V4zm5 0h1v16H7V4zm2 0h3v16H9V4zm4 0h1v16h-1V4zm2 0h2v16h-2V4zm3 0h1v16h-1V4zm2 0h2v16h-2V4z"/></svg>
-      </div>
-      <div class="logo-text">Bar<span>Scan</span></div>
+    <div class="logo">⬛</div>
+    <div class="header-text">
+      <h1>BARCODE_SCAN</h1>
+      <p>ระบบสแกนบาร์โค้ด • Web Edition</p>
     </div>
-    <div class="badge">v2.0</div>
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      LIVE
+    </div>
   </div>
 
-  <!-- Camera -->
-  <div class="camera-container" id="cameraContainer">
-    <video id="video" playsinline muted></video>
-
-    <div class="scan-overlay" id="scanOverlay" style="display:none">
-      <div class="scan-frame">
-        <div class="corner-bl"></div>
-        <div class="corner-br"></div>
+  <!-- Camera Scanner -->
+  <div class="card camera-card" style="margin-bottom:20px">
+    <div class="card-title">กล้องสแกน</div>
+    <div class="scanner-wrapper" id="scannerWrapper">
+      <div id="interactive" style="width:100%;height:100%;"></div>
+      <div class="scan-overlay" id="scanOverlay" style="display:none">
+        <div class="scan-corners">
+          <div class="corner-br"></div>
+          <div class="corner-bl"></div>
+        </div>
         <div class="scan-line"></div>
-        <div class="scan-label">กำลังสแกน...</div>
+      </div>
+      <div class="beep-ring" id="beepRing"></div>
+      <div class="camera-placeholder" id="cameraPlaceholder">
+        <div class="icon">📷</div>
+        <p>กดปุ่ม "เปิดกล้อง" เพื่อเริ่มสแกนบาร์โค้ด</p>
       </div>
     </div>
 
-    <div class="pause-overlay" id="pauseOverlay">
-      <div class="pause-icon">📷</div>
-      <div class="pause-text">กดปุ่มเพื่อเริ่มสแกน</div>
+    <div class="status-bar">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">รอเริ่มต้น</span>
     </div>
 
-    <div class="flash" id="flash"></div>
-  </div>
-
-  <!-- Start Button -->
-  <button class="start-btn" id="startBtn" onclick="startScanner()">
-    <span>📸</span> เริ่มสแกนบาร์โค้ด
-  </button>
-
-  <!-- Result Card -->
-  <div class="result-card" id="resultCard">
-    <div class="result-header">
-      <div class="result-tag">สแกนสำเร็จ</div>
-      <div class="result-format" id="resultFormat">EAN-13</div>
-    </div>
-    <div class="result-number" id="resultNumber">—</div>
-    <div class="result-actions">
-      <button class="btn btn-copy" onclick="copyResult()">📋 คัดลอก</button>
-      <button class="btn btn-rescan" onclick="rescan()">🔄 สแกนใหม่</button>
+    <div class="btn-group">
+      <button class="btn btn-primary" id="startBtn" onclick="startScanner()">▶ เปิดกล้อง</button>
+      <button class="btn btn-danger" id="stopBtn" onclick="stopScanner()" style="display:none">■ หยุด</button>
+      <button class="btn btn-ghost" onclick="clearLog()">🗑 ล้างประวัติ</button>
     </div>
   </div>
 
-  <!-- History -->
-  <div class="history-section">
-    <div class="section-title">ประวัติการสแกน</div>
-    <div class="history-list" id="historyList">
-      <div class="empty-state">
-        <div class="icon">🔍</div>
-        ยังไม่มีประวัติการสแกน<br>
-        <small>เริ่มสแกนบาร์โค้ดเพื่อดูผลลัพธ์ที่นี่</small>
+  <!-- Image Upload Scanner -->
+  <div class="card camera-card" style="margin-bottom:20px">
+    <div class="card-title">สแกนจากรูปภาพ</div>
+
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="imgFileInput" accept="image/*" onchange="handleImageFile(this.files[0])">
+      <div class="upload-icon">🖼️</div>
+      <div class="upload-label">วางรูปที่นี่ หรือคลิกเพื่อเลือก</div>
+      <div class="upload-hint">รองรับ JPG, PNG, GIF, WEBP • รูปต้องมีบาร์โค้ดที่ชัดเจน</div>
+    </div>
+
+    <div class="img-preview-wrap" id="imgPreviewWrap">
+      <img id="imgPreview" src="" alt="preview">
+      <button class="img-clear-btn" onclick="clearImage()">✕ ลบ</button>
+      <div class="img-result-overlay" id="imgResultOverlay">
+        <div class="img-result-badge" id="imgResultBadge"></div>
+      </div>
+    </div>
+
+    <div class="processing-spinner" id="processingSpinner">
+      <div class="spinner-dot"></div>
+      <div class="spinner-dot"></div>
+      <div class="spinner-dot"></div>
+      <span>กำลังวิเคราะห์รูปภาพ...</span>
+    </div>
+
+    <button class="img-scan-btn" id="imgScanBtn" onclick="scanFromImage()">🔍 สแกนบาร์โค้ดจากรูปนี้</button>
+  </div>
+
+  <div class="main-grid">
+    <!-- Manual input + Result -->
+    <div style="display:flex; flex-direction:column; gap:16px;">
+      <!-- Manual input -->
+      <div class="card">
+        <div class="card-title">ป้อนบาร์โค้ดด้วยตนเอง</div>
+        <div class="input-group">
+          <input
+            type="text"
+            class="input-field"
+            id="manualInput"
+            placeholder="พิมพ์หรือวางบาร์โค้ด..."
+            onkeydown="if(event.key==='Enter') addManual()"
+          />
+          <button class="btn btn-primary" style="flex:0;min-width:52px" onclick="addManual()">↵</button>
+        </div>
+      </div>
+
+      <!-- Latest result -->
+      <div class="card result-card" id="resultCard">
+        <div class="card-title">ผลล่าสุด</div>
+        <div class="result-value" id="resultValue" onclick="copyResult()">—</div>
+        <div class="result-meta">
+          <span class="meta-tag meta-type" id="resultType">—</span>
+          <span class="meta-tag meta-time" id="resultTime">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Log -->
+    <div class="card">
+      <div class="card-title">ประวัติการสแกน</div>
+      <div class="log-container" id="logContainer">
+        <div class="log-empty" id="logEmpty">ยังไม่มีข้อมูล</div>
       </div>
     </div>
   </div>
 
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-box">
+      <span class="stat-value" id="statTotal">0</span>
+      <div class="stat-label">สแกนทั้งหมด</div>
+    </div>
+    <div class="stat-box">
+      <span class="stat-value" id="statUnique">0</span>
+      <div class="stat-label">ค่าไม่ซ้ำ</div>
+    </div>
+    <div class="stat-box">
+      <span class="stat-value" id="statSession">00:00</span>
+      <div class="stat-label">เวลาใช้งาน</div>
+    </div>
+  </div>
 </div>
 
-<!-- Toast -->
-<div class="toast" id="toast">✓ คัดลอกแล้ว!</div>
+<div id="imgScanHidden" style="display:none;"></div>
+<div class="copy-toast" id="copyToast">✓ คัดลอกแล้ว</div>
 
 <script>
-  let codeReader = null;
-  let scanning = false;
-  let lastResult = '';
-  let history = [];
-  let selectedDeviceId = null;
+  let scanLog = [];
+  let isScanning = false;
+  let sessionStart = Date.now();
+  let sessionTimer;
 
-  const formatMap = {
-    'EAN_13': 'EAN-13', 'EAN_8': 'EAN-8', 'UPC_A': 'UPC-A', 'UPC_E': 'UPC-E',
-    'CODE_128': 'Code 128', 'CODE_39': 'Code 39', 'QR_CODE': 'QR Code',
-    'DATA_MATRIX': 'Data Matrix', 'ITF': 'ITF', 'PDF_417': 'PDF-417',
-    'AZTEC': 'Aztec', 'CODABAR': 'Codabar'
-  };
+  // ✅ Debounce: กันอ่านซ้ำ
+  let lastScan = "";
+  let lastScanTime = 0;
 
-  async function startScanner() {
-    if (scanning) return;
+  // ✅ html5-qrcode scanner instance
+  let scanner = null;
 
-    try {
-      const ZXing = window.ZXing;
-      if (!ZXing) {
-        alert('กำลังโหลดไลบรารี กรุณารอสักครู่...');
-        return;
-      }
+  // Session timer
+  function startSessionTimer() {
+    sessionTimer = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - sessionStart) / 1000);
+      const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+      const s = String(elapsed % 60).padStart(2, '0');
+      document.getElementById('statSession').textContent = `${m}:${s}`;
+    }, 1000);
+  }
+  startSessionTimer();
 
-      if (!codeReader) {
-        const hints = new Map();
-        const formats = [
-          ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8,
-          ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E,
-          ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.CODE_39,
-          ZXing.BarcodeFormat.QR_CODE, ZXing.BarcodeFormat.DATA_MATRIX,
-          ZXing.BarcodeFormat.ITF, ZXing.BarcodeFormat.PDF_417,
-          ZXing.BarcodeFormat.AZTEC, ZXing.BarcodeFormat.CODABAR
-        ];
-        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
-        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-        codeReader = new ZXing.BrowserMultiFormatReader(hints, 400);
-      }
+  function addScan(code, format = 'MANUAL') {
+    const time = new Date();
+    const entry = {
+      code,
+      format: String(format).toUpperCase(),
+      time: time.toLocaleTimeString('th-TH'),
+      id: Date.now()
+    };
+    scanLog.unshift(entry);
+    updateResult(entry);
+    updateLog();
+    updateStats();
+    triggerBeep();
+  }
 
-      const devices = await ZXing.BrowserCodeReader.listVideoInputDevices();
-      if (devices.length === 0) {
-        showNoCameraMessage();
-        return;
-      }
+  function updateResult(entry) {
+    const card = document.getElementById('resultCard');
+    card.classList.add('visible');
+    document.getElementById('resultValue').textContent = entry.code;
+    document.getElementById('resultType').textContent = entry.format;
+    document.getElementById('resultTime').textContent = entry.time;
+  }
 
-      // Prefer back camera
-      const backCamera = devices.find(d =>
-        /back|rear|environment/i.test(d.label)
-      ) || devices[devices.length - 1];
-      selectedDeviceId = backCamera.deviceId;
-
-      scanning = true;
-      document.getElementById('startBtn').textContent = '⏹ หยุดสแกน';
-      document.getElementById('startBtn').onclick = stopScanner;
-      document.getElementById('scanOverlay').style.display = 'flex';
-      document.getElementById('pauseOverlay').classList.remove('visible');
-
-      await codeReader.decodeFromVideoDevice(selectedDeviceId, 'video', (result, err) => {
-        if (result) {
-          const code = result.getText();
-          const fmt = result.getBarcodeFormat();
-          const fmtName = formatMap[ZXing.BarcodeFormat[fmt]] || formatMap[fmt] || String(fmt);
-          onScanSuccess(code, fmtName);
-        }
+  function updateLog() {
+    const container = document.getElementById('logContainer');
+    if (scanLog.length > 0) {
+      container.innerHTML = '';
+      scanLog.slice(0, 50).forEach((item, i) => {
+        const div = document.createElement('div');
+        div.className = 'log-item';
+        div.onclick = () => copyText(item.code);
+        div.innerHTML = `
+          <span class="log-num">#${String(scanLog.length - i).padStart(3, '0')}</span>
+          <span class="log-data">${item.code}</span>
+          <span class="log-time">${item.time}</span>
+        `;
+        container.appendChild(div);
       });
-
-    } catch (err) {
-      console.error(err);
-      scanning = false;
-      if (err.name === 'NotAllowedError') {
-        alert('กรุณาอนุญาตการเข้าถึงกล้อง เพื่อใช้งานการสแกนบาร์โค้ด');
-      } else {
-        alert('ไม่สามารถเริ่มกล้องได้: ' + err.message);
-      }
-      document.getElementById('startBtn').textContent = '📸 เริ่มสแกนบาร์โค้ด';
-      document.getElementById('startBtn').onclick = startScanner;
     }
   }
 
+  function updateStats() {
+    document.getElementById('statTotal').textContent = scanLog.length;
+    const unique = new Set(scanLog.map(x => x.code)).size;
+    document.getElementById('statUnique').textContent = unique;
+  }
+
+  function triggerBeep() {
+    const ring = document.getElementById('beepRing');
+    ring.classList.remove('flash');
+    void ring.offsetWidth;
+    ring.classList.add('flash');
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = 880;
+      o.type = 'sine';
+      g.gain.setValueAtTime(0.3, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+      o.start(ctx.currentTime);
+      o.stop(ctx.currentTime + 0.15);
+    } catch(e) {}
+  }
+
+  // ✅ startScanner — ใช้ html5-qrcode แทน Quagga
+  function startScanner() {
+    setStatus('กำลังเปิดกล้อง...', '');
+
+    // สร้าง instance ใหม่ทุกครั้ง (ไม่มีปัญหา event ซ้ำ)
+    scanner = new Html5Qrcode("interactive");
+
+    scanner.start(
+      { facingMode: "environment" },
+      {
+        fps: 15,
+        qrbox: { width: 250, height: 120 },
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.QR_CODE,
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.CODE_39,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E,
+          Html5QrcodeSupportedFormats.ITF,
+          Html5QrcodeSupportedFormats.CODABAR
+        ]
+      },
+      (decodedText, decodedResult) => {
+        // ✅ Debounce: กันอ่านซ้ำภายใน 1.5 วินาที
+        const now = Date.now();
+        if (decodedText === lastScan && now - lastScanTime < 1500) return;
+        lastScan = decodedText;
+        lastScanTime = now;
+
+        const fmt = decodedResult?.result?.format?.formatName || 'BARCODE';
+        addScan(decodedText, fmt);
+      },
+      () => {} // error callback: ปล่อยว่าง ไม่ต้องแสดงทุก frame ที่อ่านไม่ได้
+    ).then(() => {
+      isScanning = true;
+      document.getElementById('cameraPlaceholder').style.display = 'none';
+      document.getElementById('scanOverlay').style.display = 'block';
+      document.getElementById('startBtn').style.display = 'none';
+      document.getElementById('stopBtn').style.display = 'flex';
+      setStatus('กำลังสแกน... เล็งบาร์โค้ดไปที่กล้อง', 'active');
+    }).catch(err => {
+      setStatus('ไม่สามารถเปิดกล้องได้: ' + err, 'error');
+    });
+  }
+
+  // ✅ stopScanner — ใช้ html5-qrcode
   function stopScanner() {
-    if (codeReader) {
-      codeReader.reset();
+    if (scanner) {
+      scanner.stop().then(() => {
+        scanner.clear();
+        scanner = null;
+      }).catch(() => { scanner = null; });
     }
-    scanning = false;
-    document.getElementById('startBtn').innerHTML = '<span>📸</span> เริ่มสแกนบาร์โค้ด';
-    document.getElementById('startBtn').onclick = startScanner;
+    isScanning = false;
+    document.getElementById('cameraPlaceholder').style.display = 'flex';
     document.getElementById('scanOverlay').style.display = 'none';
-    document.getElementById('pauseOverlay').classList.add('visible');
+    document.getElementById('startBtn').style.display = 'flex';
+    document.getElementById('stopBtn').style.display = 'none';
+    setStatus('หยุดสแกนแล้ว', '');
   }
 
-  function onScanSuccess(code, format) {
-    if (code === lastResult) return;
-    lastResult = code;
-
-    // Flash
-    const flash = document.getElementById('flash');
-    flash.classList.add('active');
-    setTimeout(() => flash.classList.remove('active'), 150);
-
-    // Vibrate
-    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-
-    // Show result
-    document.getElementById('resultNumber').textContent = code;
-    document.getElementById('resultFormat').textContent = format;
-    document.getElementById('resultCard').classList.add('visible');
-
-    // Add to history
-    addHistory(code, format);
-
-    // Auto stop after scan
-    setTimeout(() => {
-      stopScanner();
-    }, 300);
+  function addManual() {
+    const input = document.getElementById('manualInput');
+    const code = input.value.trim();
+    if (!code) return;
+    addScan(code, 'MANUAL');
+    input.value = '';
+    input.focus();
   }
 
-  function addHistory(code, format) {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-
-    history.unshift({ code, format, time: timeStr });
-    if (history.length > 20) history.pop();
-    renderHistory();
+  function clearLog() {
+    scanLog = [];
+    document.getElementById('logContainer').innerHTML = '<div class="log-empty" id="logEmpty">ยังไม่มีข้อมูล</div>';
+    document.getElementById('resultCard').classList.remove('visible');
+    updateStats();
   }
 
-  function renderHistory() {
-    const list = document.getElementById('historyList');
-    if (history.length === 0) {
-      list.innerHTML = `<div class="empty-state"><div class="icon">🔍</div>ยังไม่มีประวัติการสแกน<br><small>เริ่มสแกนบาร์โค้ดเพื่อดูผลลัพธ์ที่นี่</small></div>`;
-      return;
-    }
-
-    list.innerHTML = history.map((item, i) => `
-      <div class="history-item">
-        <div class="history-icon">🔖</div>
-        <div class="history-info">
-          <div class="history-code">${item.code}</div>
-          <div class="history-meta">${item.format} · ${item.time}</div>
-        </div>
-        <button class="history-copy" onclick="copyText('${item.code}')" title="คัดลอก">📋</button>
-      </div>
-    `).join('');
+  function setStatus(msg, type) {
+    document.getElementById('statusText').textContent = msg;
+    const dot = document.getElementById('statusDot');
+    dot.className = 'status-dot' + (type ? ' ' + type : '');
   }
 
   function copyResult() {
-    const code = document.getElementById('resultNumber').textContent;
-    copyText(code);
+    const val = document.getElementById('resultValue').textContent;
+    if (val && val !== '—') copyText(val);
   }
 
   function copyText(text) {
     navigator.clipboard.writeText(text).then(() => {
-      showToast('✓ คัดลอกแล้ว: ' + text);
-    }).catch(() => {
-      // Fallback
-      const el = document.createElement('textarea');
-      el.value = text;
-      document.body.appendChild(el);
-      el.select();
-      document.execCommand('copy');
-      document.body.removeChild(el);
-      showToast('✓ คัดลอกแล้ว!');
+      const toast = document.getElementById('copyToast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
     });
   }
 
-  function showToast(msg) {
-    const toast = document.getElementById('toast');
-    toast.textContent = msg;
-    toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 2500);
+  // ===== IMAGE SCANNING =====
+  let currentImageFile = null;
+
+  function handleImageFile(file) {
+    if (!file) return;
+    currentImageFile = file;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      document.getElementById('imgPreview').src = e.target.result;
+      document.getElementById('imgPreviewWrap').style.display = 'block';
+      document.getElementById('imgScanBtn').style.display = 'block';
+      document.getElementById('imgResultOverlay').classList.remove('show');
+    };
+    reader.readAsDataURL(file);
   }
 
-  function rescan() {
-    lastResult = '';
-    document.getElementById('resultCard').classList.remove('visible');
-    startScanner();
+  // Drag & drop
+  const uploadZone = document.getElementById('uploadZone');
+  uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+  uploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) handleImageFile(file);
+  });
+
+  // Paste
+  document.addEventListener('paste', e => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) { handleImageFile(item.getAsFile()); break; }
+    }
+  });
+
+  function clearImage() {
+    currentImageFile = null;
+    document.getElementById('imgPreview').src = '';
+    document.getElementById('imgPreviewWrap').style.display = 'none';
+    document.getElementById('imgScanBtn').style.display = 'none';
+    document.getElementById('imgFileInput').value = '';
+    document.getElementById('processingSpinner').classList.remove('show');
+    document.getElementById('imgResultOverlay').classList.remove('show');
   }
 
-  function showNoCameraMessage() {
-    const container = document.getElementById('cameraContainer');
-    container.innerHTML = `<div class="no-camera"><div class="icon">📷</div>ไม่พบกล้องบนอุปกรณ์นี้<br><small>กรุณาใช้งานบนมือถือหรืออุปกรณ์ที่มีกล้อง</small></div>`;
-  }
+  // ✅ scanFromImage — ใช้ html5-qrcode scanFile()
+  function scanFromImage() {
+    if (!currentImageFile) return;
 
-  // Show pause overlay initially
-  document.getElementById('pauseOverlay').classList.add('visible');
+    const btn = document.getElementById('imgScanBtn');
+    btn.disabled = true;
+    document.getElementById('processingSpinner').classList.add('show');
+    document.getElementById('imgResultOverlay').classList.remove('show');
+
+    // ใช้ instance ชั่วคราวสำหรับสแกนรูป (ไม่ใช้ #interactive เพื่อไม่ชนกับกล้อง)
+    const imgScanner = new Html5Qrcode("imgScanHidden");
+
+    imgScanner.scanFile(currentImageFile, true)
+      .then(decodedText => {
+        document.getElementById('processingSpinner').classList.remove('show');
+        btn.disabled = false;
+
+        document.getElementById('imgResultBadge').textContent = '✓ ' + decodedText;
+        document.getElementById('imgResultOverlay').classList.add('show');
+        addScan(decodedText, 'IMAGE');
+        setStatus('พบบาร์โค้ดในรูปภาพ: ' + decodedText, 'active');
+      })
+      .catch(() => {
+        document.getElementById('processingSpinner').classList.remove('show');
+        btn.disabled = false;
+        document.getElementById('imgResultBadge').textContent = '✗ ไม่พบบาร์โค้ดในรูปนี้';
+        document.getElementById('imgResultOverlay').classList.add('show');
+        setStatus('ไม่พบบาร์โค้ด ลองใช้รูปที่ชัดกว่านี้', 'error');
+        setTimeout(() => document.getElementById('imgResultOverlay').classList.remove('show'), 2500);
+      });
+  }
 </script>
 </body>
 </html>
